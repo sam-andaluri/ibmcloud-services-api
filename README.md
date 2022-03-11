@@ -6,7 +6,7 @@ Get a list of IBM Cloud services.
 Required environment variables:
 
 ```bash
-export GLOBAL_CATALOG_URL=<SERVICE_URL>
+export GLOBAL_CATALOG_URL=https://globalcatalog.cloud.ibm.com/api/v1
 export GLOBAL_CATALOG_AUTHTYPE=iam
 export GLOBAL_CATALOG_APIKEY=<API_KEY>
 ```
