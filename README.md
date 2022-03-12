@@ -11,6 +11,6 @@ export GLOBAL_CATALOG_AUTHTYPE=iam
 export GLOBAL_CATALOG_APIKEY=<API_KEY>
 ```
 
-Local dev env with: `uvicorn main:app --reload`
+Local dev env with: `uvicorn app.main:app --reload`
 
 Built image: `quay.io/congxdev/ibmcloud-services-api:latest`.

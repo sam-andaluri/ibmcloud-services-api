@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from fastapi import FastAPI, status
 from ibm_platform_services import GlobalCatalogV1
 from jsonpath_ng import jsonpath, parse
 from cachetools import cached
@@ -23,6 +24,15 @@ def retrieve_all_services():
         services.extend(result['resources'])
 
     return services
+
+
+def retrieve_pricing_plans(service_id):
+    matching_services = [svc for svc in retrieve_all_services() if svc['id'] == service_id]
+    if len(matching_services) > 0:
+        # Entry found, retrieving pricing plans
+        return service_client.get_catalog_entry(id=service_id, include='*', depth='*').get_result()
+    else:
+        return []
 
 
 @cached(cache={})
@@ -70,10 +80,36 @@ def get_resource_count(result):
 
 
 @app.get('/')
-async def root():
+async def get_all_services():
     return retrieve_all_services()
 
 
 @app.get('/ibm')
-async def root():
+async def get_ibm_services():
     return retrieve_ibm_services()
+
+
+@app.get('/services/{service_id}/pricing-plans')
+async def get_pricing(service_id):
+    plans = retrieve_pricing_plans(service_id)
+    if len(plans) > 0:
+        return plans
+    else:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"error": f"{service_id} is not a valid IBM Cloud service"})
+
+
+@app.get('/pricing/{catalog_entry_id}')
+async def get_pricing_details(catalog_entry_id):
+    pricing = service_client.get_pricing(id=catalog_entry_id).get_result()
+    return pricing
+
+
+@app.get('/services/pricing-jsonpath')
+async def get_pricing_jsonpath():
+    return {
+        'plan_id': '$.children[*].id',
+        'regions_for_plan': "$.children[?(@.id == 'plan_id')].children[*].metadata.deployment.location",
+        'regional_plan_deployment_id': "$.children[?(@.id == 'plan_id')].children[?(@.metadata.deployment.location == 'region')].id"
+    }
