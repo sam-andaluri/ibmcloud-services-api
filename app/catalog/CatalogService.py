@@ -1,6 +1,6 @@
 from ibm_platform_services import GlobalCatalogV1, ApiException
 from jsonpath_ng import parse
-from typing import Any, List
+from typing import Any, List, Optional
 from .catalog_types import Service, VisibilityRestrictionEnum, ServicePricing, PlanPricing, DeploymentPricing
 from cachetools import cached, TTLCache
 
@@ -125,13 +125,31 @@ class CatalogService:
         )
         return deployment_pricing
 
-    def get_pricing(self, service_id: str):
+    def get_pricing(self, service_id: str, region: Optional[str] = None) -> Optional[ServicePricing]:
         full_service_pricing = self._get_service_pricing(service_id=service_id)
+
+        geo_tags = []
+        if 'geo_tags' in full_service_pricing:
+            geo_tags = full_service_pricing['geo_tags']
+        if len(geo_tags) > 0 and region is not None:
+            if region not in geo_tags:
+                print(f"Service does not operate in region {region}")
+                return None
+
         service_plans: List[PlanPricing] = []
         for svc_plan in full_service_pricing['children']:
             print(f"Getting plan pricing for {svc_plan['id']}")
             service_deployments: List[DeploymentPricing] = []
             for svc_deployment in svc_plan['children']:
+                deployment_location = ''
+                if 'geo_tags' in svc_deployment:
+                    if len(svc_deployment['geo_tags']) > 0:
+                        deployment_location = svc_deployment['geo_tags'][0]
+
+                if region is not None:
+                    if region != deployment_location:
+                        continue
+
                 print(f"-- Getting deployment pricing for {svc_deployment['id']}")
                 try:
                     deployment = self._get_deployment_pricing(svc_deployment['id'])
@@ -141,13 +159,10 @@ class CatalogService:
                     print(f"-- Cannot retrieve pricing for deployment id {svc_deployment['id']}")
                     print("----- Most likely because it is a non-paid plan, i.e., free or lite")
                     print("----- Adding deployment without pricing details")
-                    location = ''
-                    if svc_deployment['geo_tags'] is not None:
-                        if len(svc_deployment['geo_tags']) > 0:
-                            location = svc_deployment['geo_tags'][0]
+
                     deployment = DeploymentPricing(
                         name=svc_deployment['name'],
-                        location=location,
+                        location=deployment_location,
                         metrics=[],
                         effective_from=None,
                         effective_until=None,
@@ -172,7 +187,7 @@ class CatalogService:
             pricing_tags=full_service_pricing['pricing_tags'],
             updated=full_service_pricing['updated'],
             url=full_service_pricing['url'],
-            geo_tags=full_service_pricing['geo_tags'] if full_service_pricing['geo_tags'] is not None else [],
+            geo_tags=geo_tags,
             plans=service_plans,
             service_id=full_service_pricing['id'],
             service_name=full_service_pricing['name']

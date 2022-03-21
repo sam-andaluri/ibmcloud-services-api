@@ -1,8 +1,7 @@
-from fastapi.responses import JSONResponse
 from fastapi import FastAPI, status
+from fastapi.responses import JSONResponse
 from ibm_platform_services import GlobalCatalogV1
-from jsonpath_ng import jsonpath, parse
-from cachetools import cached
+from typing import Optional
 
 # Create a new Fast API app
 from app.catalog.CatalogService import CatalogService
@@ -27,6 +26,15 @@ async def get_ibm_services() -> List[Service]:
 
 
 @app.get('/pricing/{service_id}')
-async def get_pricing(service_id):
-    return catalog_service.get_pricing(service_id)
+async def get_pricing(service_id: str, region: Optional[str] = None):
+    if region:
+        pricing_for_region = catalog_service.get_pricing(service_id, region=region)
+        if pricing_for_region is not None:
+            return pricing_for_region
+        else:
+            return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={
+                'error': f'Service is not available in region {region}'
+            })
+    else:
+        return catalog_service.get_pricing(service_id)
 
