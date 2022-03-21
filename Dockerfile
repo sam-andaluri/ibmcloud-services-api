@@ -1,4 +1,4 @@
-FROM python:3.9
+FROM registry.access.redhat.com/ubi8/python-39:1-35.1647529301
 WORKDIR /code
 COPY ./requirements.txt /code/requirements.txt
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
