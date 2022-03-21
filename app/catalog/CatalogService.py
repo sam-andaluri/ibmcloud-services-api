@@ -106,12 +106,18 @@ class CatalogService:
         else:
             return []
 
+    # cache pricing for no longer than 12 hours
+    @cached(cache=TTLCache(maxsize=1024, ttl=43200))
     def _get_deployment_pricing(self, catalog_entry_id: str) -> DeploymentPricing:
         deployment_json = self.service_client.get_pricing(id=catalog_entry_id).get_result()
+        deployment_type = None
+        if 'type' in deployment_json:
+            deployment_type = deployment_json['type'].lower()
+
         deployment_pricing = DeploymentPricing(
             effective_from=deployment_json['effective_from'],
             effective_until=deployment_json['effective_until'],
-            type=deployment_json['type'].lower(),
+            type=deployment_type,
             location=deployment_json['deployment_location'],
             id=deployment_json['deployment_id'],
             metrics=deployment_json['metrics'],
@@ -121,18 +127,20 @@ class CatalogService:
 
     def get_pricing(self, service_id: str):
         full_service_pricing = self._get_service_pricing(service_id=service_id)
-
         service_plans: List[PlanPricing] = []
         for svc_plan in full_service_pricing['children']:
+            print(f"Getting plan pricing for {svc_plan['id']}")
             service_deployments: List[DeploymentPricing] = []
             for svc_deployment in svc_plan['children']:
+                print(f"-- Getting deployment pricing for {svc_deployment['id']}")
                 try:
                     deployment = self._get_deployment_pricing(svc_deployment['id'])
                     service_deployments.append(deployment)
-                except ApiException:
-                    print(f"Cannot retrieve pricing for deployment id {svc_deployment['id']}")
-                    print("> Most likely because it is a non-paid plan, i.e., free or lite")
-                    print("> Adding deployment without pricing details")
+                except ApiException as ex:
+                    print(ex)
+                    print(f"-- Cannot retrieve pricing for deployment id {svc_deployment['id']}")
+                    print("----- Most likely because it is a non-paid plan, i.e., free or lite")
+                    print("----- Adding deployment without pricing details")
                     location = ''
                     if svc_deployment['geo_tags'] is not None:
                         if len(svc_deployment['geo_tags']) > 0:
@@ -157,7 +165,6 @@ class CatalogService:
             )
             service_plans.append(plan)
 
-        # return service_plans
         service_pricing = ServicePricing(
             created=full_service_pricing['created'],
             catalog_crn=full_service_pricing['catalog_crn'],

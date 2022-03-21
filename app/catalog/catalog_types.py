@@ -66,7 +66,7 @@ class DeploymentMetricsPricing:
 class DeploymentPricing:
     id: str
     location: str
-    type: str
+    type: Optional[str]
     effective_from: Optional[datetime]
     effective_until: Optional[datetime]
     metrics: List[DeploymentMetricsPricing]

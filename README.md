@@ -14,3 +14,10 @@ export GLOBAL_CATALOG_APIKEY=<API_KEY>
 Local dev env with: `uvicorn app.main:app --reload`
 
 Built image: `quay.io/congxdev/ibmcloud-services-api:latest`.
+
+Build (replace image location with your image repository and update the tag accordingly):
+
+```sh
+podman build . -t quay.io/congxdev/ibmcloud-services-api:0.0.4
+podman push quay.io/congxdev/ibmcloud-services-api:0.0.4
+```
