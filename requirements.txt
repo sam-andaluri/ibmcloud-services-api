@@ -2,5 +2,5 @@ cachetools==5.0.0
 fastapi==0.75.0
 ibm_platform_services==0.22.6
 jsonpath_ng==1.5.3
-pydantic==1.9.0
+pydantic==1.10.13
 uvicorn==0.15.0
